@@ -117,11 +117,12 @@ class WheatomicsAdapter:
     ):
         self._set_types_and_fields(node_types, node_fields, edge_types, edge_fields)
         rice_genes = self._read_gene_csv(csv_file="data/mart_osjaponica_irgsp1_export.txt")
-        rice_genes = rice_genes.drop(labels="UniProtKB Gene Name symbol", axis=1)
-        rice_genes = rice_genes.drop('Gene description', axis=1)
+        rice_genes.drop(['Gene description','Gene type','UniProtKB Gene Name ID','UniProtKB Gene Name symbol'], axis=1, inplace=True)
         ath_genes = self._read_gene_csv(csv_file="data/mart_ath_tair10_export.txt")
-        self._node_data = pd.concat([rice_genes, ath_genes])
-        print("_node_data size: ", self._node_data.size)
+        ath_genes.drop(['Gene name', 'Gene type'],axis=1, inplace=True)
+        wheat_genes = self._read_gene_csv(csv_file="data/mart_tritaestivum_CS_IWGSCv1.1_export.txt")
+        wheat_genes.drop(labels=['Gene name','Gene description'],axis=1, inplace=True)
+        self._node_data = pd.concat([rice_genes, ath_genes,wheat_genes])
 
         self._edge_data = self._read_homolog_csv()
         # self._data_homologs = self._read_csv(csv_file="homology.csv")

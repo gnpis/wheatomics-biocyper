@@ -2,8 +2,8 @@
 
 gene:
     represented_as: node
-    preferred_id: uniprot
-    input_label: uniprot_protein
+    preferred_id: Gene
+    input_label: Gene
 
 # disease:
 #     represented_as: node

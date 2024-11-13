@@ -76,8 +76,8 @@ class WheatomicsAdapterEdgeType(Enum):
     """
 
     # HAS_TRANSCRIPT = "HAS_TRANSCRIPT" # BETWEEN GENE AND TRANSCRIPT
-    IS_HOMOLOGOUS_TO = "IS_HOMOLOGOUS_TO" # BETWEEN 2 GENES
-    LABELS = "IS_HOMOLOGOUS_TO"
+    HOMOLOGOUS_TO = "HOMOLOGOUS_TO" # BETWEEN 2 GENES
+    LABELS = "HOMOLOGOUS_TO"
 
     # MAPPED = "MAPPED" # BETWEEN cs GENES AND GENES OF OTHER ACCESSIONS
     # KNOWS = "KNOWS"
@@ -157,13 +157,13 @@ class WheatomicsAdapter:
                 yield (
                     wheat_gene_stable_id,
                     arabidopsis_gene_id,
-                    'IS_HOMOLOGOUS_TO'
+                    'HOMOLOGOUS_TO'
                 )
             if japonica_gene_id != 'nan':
                 yield (
                     wheat_gene_stable_id,
                     japonica_gene_id,
-                    'IS_HOMOLOGOUS_TO'
+                    'HOMOLOGOUS_TO'
                 )
 
         # rename 'id' to 'hash'

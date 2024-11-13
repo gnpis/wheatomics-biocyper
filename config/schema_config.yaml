@@ -10,10 +10,10 @@ gene:
 #     preferred_id: doid
 #     input_label: do_disease
 
-homologous_to:
+HOMOLOGOUS_TO:
     is_a: GeneToGeneHomologyAssociation
     represented_as: edge
-    input_label: IS_HOMOLOGOUS_TO
+    input_label: HOMOLOGOUS_TO
 
 # protein to disease association:
 #     is_a: association

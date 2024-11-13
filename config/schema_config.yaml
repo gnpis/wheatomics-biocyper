@@ -2,7 +2,7 @@
 
 gene:
     represented_as: node
-    preferred_id: Gene
+    preferred_id: ensembl
     input_label: Gene
 
 # disease:
@@ -10,10 +10,10 @@ gene:
 #     preferred_id: doid
 #     input_label: do_disease
 
-# protein interaction:
-#     is_a: pairwise molecular interaction
-#     represented_as: edge
-#     input_label: protein_protein_interaction
+homologous_to:
+    is_a: GeneToGeneHomologyAssociation
+    represented_as: edge
+    input_label: IS_HOMOLOGOUS_TO
 
 # protein to disease association:
 #     is_a: association

@@ -75,8 +75,10 @@ class WheatomicsAdapterEdgeType(Enum):
     Define possible edges the adapter can provide.
     """
 
-    HAS_TRANSCRIPT = "HAS_TRANSCRIPT" # BETWEEN GENE AND TRANSCRIPT
-    HAS_HOMOLOG = "HAS_HOMOLOG" # BETWEEN 2 GENES
+    # HAS_TRANSCRIPT = "HAS_TRANSCRIPT" # BETWEEN GENE AND TRANSCRIPT
+    IS_HOMOLOGOUS_TO = "IS_HOMOLOGOUS_TO" # BETWEEN 2 GENES
+    LABELS = "IS_HOMOLOGOUS_TO"
+
     # MAPPED = "MAPPED" # BETWEEN cs GENES AND GENES OF OTHER ACCESSIONS
     # KNOWS = "KNOWS"
     # INVOLVED_IN = "INVOLVED_IN"
@@ -119,7 +121,9 @@ class WheatomicsAdapter:
         rice_genes = rice_genes.drop('Gene description', axis=1)
         ath_genes = self._read_gene_csv(csv_file="data/mart_ath_tair10_export.txt")
         self._node_data = pd.concat([rice_genes, ath_genes])
-        print(self._node_data.size)
+        print("_node_data size: ", self._node_data.size)
+
+        self._edge_data = self._read_homolog_csv()
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
         # self._node_data = self._get_node_data()
@@ -131,19 +135,35 @@ class WheatomicsAdapter:
         # # print unique _type
         # print(f"Unique types: {self._data['_type'].unique()}")
 
-    def _read_gene_csv(self, csv_file):
+    def _read_homolog_csv(self, csv_file='data/Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt'):
         """
         Read data from CSV file.
         """
-#         Gene stable ID	Chromosome/scaffold name	Gene start (bp)	Gene end (bp)	Gene type	Gene description	UniProtKB Gene Name symbol	UniProtKB Gene Name ID
-# Os02g0788600	2	33502431	33505888	protein_coding			
-        logger.info("Reading data from CSV file.")
+
+        logger.info("Reading homolog data from CSV file.")
 
         data = pd.read_csv(csv_file, dtype=str, sep='\t')
-        data = data.assign(_labels='Gene') # add new _labels column with Gene value
 
-        # screen the entire data frame for double quotes
-        data = data.map(lambda x: x.replace('"', "") if isinstance(x, str) else x)
+        for index, row in data.iterrows():
+            # if row["_labels"] not in self.node_types:
+            #     continue
+
+            wheat_gene_stable_id = str(row["Gene stable ID"])
+            arabidopsis_gene_id = str(row["Arabidopsis thaliana gene stable ID"])
+            japonica_gene_id = str(row["Oryza sativa Japonica Group gene stable ID"])
+
+            if arabidopsis_gene_id != 'nan':
+                yield (
+                    wheat_gene_stable_id,
+                    arabidopsis_gene_id,
+                    'IS_HOMOLOGOUS_TO'
+                )
+            if japonica_gene_id != 'nan':
+                yield (
+                    wheat_gene_stable_id,
+                    japonica_gene_id,
+                    'IS_HOMOLOGOUS_TO'
+                )
 
         # rename 'id' to 'hash'
         data.rename(columns={"id": "hash"}, inplace=True)
@@ -151,13 +171,16 @@ class WheatomicsAdapter:
         return data
 
 
-    def _read_csv(self, csv_file):
+    def _read_gene_csv(self, csv_file):
         """
         Read data from CSV file.
         """
-        logger.info("Reading data from CSV file.")
+#         Gene stable ID	Chromosome/scaffold name	Gene start (bp)	Gene end (bp)	Gene type	Gene description	UniProtKB Gene Name symbol	UniProtKB Gene Name ID
+# Os02g0788600	2	33502431	33505888	protein_coding			
+        logger.info(f"Reading gene data from CSV file: {csv_file}.")
 
-        data = pd.read_csv(csv_file, dtype=str)
+        data = pd.read_csv(csv_file, dtype=str, sep='\t')
+        data = data.assign(_labels='Gene') # add new _labels column with Gene value
 
         # screen the entire data frame for double quotes
         data = data.map(lambda x: x.replace('"', "") if isinstance(x, str) else x)
@@ -252,49 +275,18 @@ class WheatomicsAdapter:
         """
 
         logger.info("Generating edges.")
-
-        logger.info("FAKE method to be imlpemented.")
-
-        # # edges: tuples of rel_id, start_id, end_id, type, fields
-        # for index, row in self._edge_data.iterrows():
-        #     if row["_type"] not in self.edge_types:
-        #         continue
-
-        #     _id = None
-        #     _start = row["_start"]
-        #     _end = row["_end"]
-        #     _type = row["_type"]
-        #     _props = {}
-        #     # could filter non-values here
-
-        #     # special cases - processing
-        #     if _type == WheatomicsAdapterEdgeType.MADE_CALL.value:
-        #         # caller is phone, extend to person
-        #         # start of caller is phone call, end is phone
-        #         _call_id = _start
-        #         _caller_id = self._get_phone_owner_id(_end)
-
-        #         _end = _call_id
-        #         _start = _caller_id
-        #         _type = "MADE_CALL"
-
-        #     elif _type == WheatomicsAdapterEdgeType.RECEIVED_CALL.value:
-        #         # called is phone, extend to person
-        #         # start of called is phone call, end is phone
-        #         _call_id = _start
-        #         _called_id = self._get_phone_owner_id(_end)
-
-        #         _end = _call_id
-        #         _start = _called_id
-        #         _type = "RECEIVED_CALL"
-
-        #     yield (
-        #         _id,
-        #         _start,
-        #         _end,
-        #         _type,
-        #         _props,
-        #     )
+        for row in self._edge_data:
+            # if row["_type"] not in self.edge_types:
+            #     continue
+            _id = None
+            _props = {}
+            yield(
+                _id,
+                row[0],
+                row[1],
+                row[2],
+                _props
+            )
 
     def _set_types_and_fields(self, node_types, node_fields, edge_types, edge_fields):
         if node_types:

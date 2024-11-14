@@ -227,7 +227,7 @@ class WheatomicsAdapter:
         Read data from CSV file.
         """
         logger.info("Reading annotation data.")
-        data = pd.read_csv('data/OryzabaseGeneListEn_20241017010108.txt', sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
+        data = pd.read_csv('data/goa/OryzabaseGeneListEn_20241017010108.txt', sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
         data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
             'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True) 
         return data
@@ -302,7 +302,7 @@ class WheatomicsAdapter:
         data = data.map(lambda x: x.replace('"', "") if isinstance(x, str) else x)
 
         # rename 'id' to 'hash'
-        data.rename(columns={"Gene stable ID": "hash"}, inplace=True)
+        #data.rename(columns={"Gene stable ID": "hash"}, inplace=True)
 
         return data
 

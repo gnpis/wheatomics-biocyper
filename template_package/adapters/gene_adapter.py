@@ -14,10 +14,9 @@ class WheatomicsAdapterNodeType(Enum):
     Define types of nodes the adapter can provide.
     """
 
-    GENE = ":Gene"
-    TRANSCRIPT = ":Transcript"
-    LABELS = "Gene"
-    ONTOLOGY_TERM = ":Ontology_term"
+    GENE = "Gene"
+    TRANSCRIPT = "Transcript"
+    ONTOLOGY_TERM = "GO_term"
     # OFFICER = ":Officer"
     # LOCATION = ":Location"
     # CRIME = ":Crime"
@@ -163,14 +162,13 @@ class WheatomicsAdapter:
 
         self._node_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
         
-        go_terms = self._get_annotation_data()
-        self._node_data = pd.concat([self._node_data, go_terms])
+        self.go_terms = self._get_annotation_data()
         self._edge_data = self._read_homolog_csv()
 
         print(self._node_data.head())
         print(self._node_data.tail())
         # print head of the go_terms data frame
-        print(go_terms.head())
+        print(self.go_terms.head())
 
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
@@ -389,6 +387,19 @@ class WheatomicsAdapter:
                 _type,
                 _props,
             )
+        for index, row in self.go_terms.iterrows():
+            if row["_labels"] not in self.node_types:
+                continue
+            
+            _id = row["_id"]
+            _type = row["_labels"]
+            _props = row.to_dict()
+            yield (
+                _id,
+                _type,
+                _props,
+            )
+            
 
     def get_edges(self):
         """

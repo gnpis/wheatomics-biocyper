@@ -5,18 +5,24 @@ gene:
     preferred_id: ensembl
     input_label: Gene
 
+go term:
+    is_a: ontology class
+    represented_as: node
+    preferred_id: go
+    input_label: GO_term
+
 # disease:
 #     represented_as: node
 #     preferred_id: doid
 #     input_label: do_disease
 
 HOMOLOGOUS_TO:
-    is_a: GeneToGeneHomologyAssociation
+    is_a: association
     represented_as: edge
     input_label: HOMOLOGOUS_TO
 
 RELATED_TO:
-    is_a: GeneToGoTermAssociation
+    is_a: association
     represented_as: edge
     input_label: RELATED_TO
     

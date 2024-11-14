@@ -116,13 +116,39 @@ class WheatomicsAdapter:
         edge_fields: Optional[list] = None,
     ):
         self._set_types_and_fields(node_types, node_fields, edge_types, edge_fields)
+        
+        # Define a constant for the columns to be renamed
+        RENAME_COLUMNS = {
+            "Gene stable ID": "gene_id",
+            "Chromosome/scaffold name": "chromosome",
+            "Gene start (bp)": "start",
+            "Gene end (bp)": "stop"
+        }
+
         rice_genes = self._read_gene_csv(csv_file="data/gene/mart_osjaponica_irgsp1_export.txt")
         rice_genes.drop(['Gene description','Gene type','UniProtKB Gene Name ID','UniProtKB Gene Name symbol'], axis=1, inplace=True)
+        rice_genes.rename(columns=RENAME_COLUMNS, inplace=True)
+        rice_genes['_id'] = rice_genes['gene_id']
+        rice_genes = rice_genes.assign(annotation="irgsp1", genotype="Oryza sativa japonica")
+
         ath_genes = self._read_gene_csv(csv_file="data/gene/mart_ath_tair10_export.txt")
-        ath_genes.drop(['Gene name', 'Gene type'],axis=1, inplace=True)
-        wheat_genes = self._read_gene_csv(csv_file="data/gene/mart_tritaestivum_CS_IWGSCv1.1_export.txt")
-        wheat_genes.drop(labels=['Gene name','Gene description'],axis=1, inplace=True)
-        self._node_data = pd.concat([rice_genes, ath_genes,wheat_genes])
+        ath_genes.drop(['Gene name', 'Gene type'], axis=1, inplace=True)
+        ath_genes.rename(columns=RENAME_COLUMNS, inplace=True)
+        ath_genes['_id'] = ath_genes['gene_id']
+        ath_genes = ath_genes.assign(annotation="tair10", genotype="Col-0")
+
+        csv1_wheat_genes = self._read_gene_csv(csv_file="data/gene/mart_tritaestivum_CS_IWGSCv1.1_export.txt")
+        csv1_wheat_genes.drop(labels=['Gene name','Gene description'],axis=1, inplace=True)
+        csv1_wheat_genes.rename(columns=RENAME_COLUMNS, inplace=True)
+        csv1_wheat_genes['_id'] = csv1_wheat_genes['gene_id']
+        csv1_wheat_genes = csv1_wheat_genes.assign(annotation="CSv1.1", genotype="Chinese Spring")
+
+        renan_wheat_genes = self._read_gene_csv(csv_file="data/gene/TaeRenan_refseqv2.1_genesHC.tsv")
+        renan_wheat_genes.rename(columns={"chrom": "chromosome"}, inplace=True)
+        renan_wheat_genes['_id'] = renan_wheat_genes['gene_id']
+        renan_wheat_genes = renan_wheat_genes.assign(annotation="Renan", genotype="Renan")
+
+        self._node_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
 
         self._edge_data = self._read_homolog_csv()
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
@@ -171,6 +197,28 @@ class WheatomicsAdapter:
 
         return data
 
+    def _read_homolog_csv(self, csv_file='data/homology/Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt'):
+        """
+        Read data from CSV file.
+        """
+
+        logger.info("Reading homolog data from CSV file.")
+        df = pd.read_csv(csv_file, dtype=str, sep='\t')
+
+        # Initialize a list to store the tuples (+ the relationship type)
+        gene_pairs = []
+
+        # Iterate over the DataFrame rows
+        for index, row in df.iterrows():
+            # Check if 'Ath gene' or 'Rice gene' exists and add the corresponding pair
+            if pd.notna(row['Arabidopsis thaliana gene stable ID']):
+                gene_pairs.append((row['Gene stable ID'], row['Arabidopsis thaliana gene stable ID'], "HOMOLOGOUS_TO"))
+            if pd.notna(row['Oryza sativa Japonica Group gene stable ID']):
+                gene_pairs.append((row['Gene stable ID'], row['Oryza sativa Japonica Group gene stable ID'], "HOMOLOGOUS_TO"))
+
+        # Create a new DataFrame from the gene pairs
+        result_df = pd.DataFrame(gene_pairs, columns=['source', 'target', '_type'])
+        return result_df
 
     def _read_gene_csv(self, csv_file):
         """
@@ -246,12 +294,12 @@ class WheatomicsAdapter:
 
         logger.info("Generating nodes.")
         # nodes: tuples of id, type, fields
-        iter=self._node_data.iterrows()
-        for index, row in iter:
+        it=self._node_data.iterrows()
+        for index, row in it:
             if row["_labels"] not in self.node_types:
                 continue
 
-            _id = row["Gene stable ID"]
+            _id = row["_id"]
             _type = row["_labels"]
             _props = row.to_dict()
             # could filter non-values here
@@ -276,16 +324,16 @@ class WheatomicsAdapter:
         """
 
         logger.info("Generating edges.")
-        for row in self._edge_data:
+        for index, row in self._edge_data.iterrows():
             # if row["_type"] not in self.edge_types:
             #     continue
             _id = None
             _props = {}
             yield(
                 _id,
-                row[0],
-                row[1],
-                row[2],
+                row['source'],
+                row['target'],
+                row['_type'],
                 _props
             )
 

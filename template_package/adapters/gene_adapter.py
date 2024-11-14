@@ -116,11 +116,11 @@ class WheatomicsAdapter:
         edge_fields: Optional[list] = None,
     ):
         self._set_types_and_fields(node_types, node_fields, edge_types, edge_fields)
-        rice_genes = self._read_gene_csv(csv_file="data/mart_osjaponica_irgsp1_export.txt")
+        rice_genes = self._read_gene_csv(csv_file="data/gene/mart_osjaponica_irgsp1_export.txt")
         rice_genes.drop(['Gene description','Gene type','UniProtKB Gene Name ID','UniProtKB Gene Name symbol'], axis=1, inplace=True)
-        ath_genes = self._read_gene_csv(csv_file="data/mart_ath_tair10_export.txt")
+        ath_genes = self._read_gene_csv(csv_file="data/gene/mart_ath_tair10_export.txt")
         ath_genes.drop(['Gene name', 'Gene type'],axis=1, inplace=True)
-        wheat_genes = self._read_gene_csv(csv_file="data/mart_tritaestivum_CS_IWGSCv1.1_export.txt")
+        wheat_genes = self._read_gene_csv(csv_file="data/gene/mart_tritaestivum_CS_IWGSCv1.1_export.txt")
         wheat_genes.drop(labels=['Gene name','Gene description'],axis=1, inplace=True)
         self._node_data = pd.concat([rice_genes, ath_genes,wheat_genes])
 
@@ -136,7 +136,7 @@ class WheatomicsAdapter:
         # # print unique _type
         # print(f"Unique types: {self._data['_type'].unique()}")
 
-    def _read_homolog_csv(self, csv_file='data/Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt'):
+    def _read_homolog_csv(self, csv_file='data/homology/Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt'):
         """
         Read data from CSV file.
         """

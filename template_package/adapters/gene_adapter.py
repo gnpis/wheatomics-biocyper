@@ -210,10 +210,10 @@ class WheatomicsAdapter:
         # loop through the data frame and yield each row as a ID GO_TERM DESCRIPTION LABELS tuple
         GO_string = str(row["GO Term"])
         if GO_string != 'nan':
-            GO_terms = self.parse_go_terms(GO_string)
+            GO_terms = self._parse_go_terms(GO_string)
             for GO_term in GO_terms:
-                GO_term = self.parse_go_term(GO_term)
-                DESC = self.parse_go_term_description(GO_term)
+                GO_term = self._parse_go_term(GO_term)
+                DESC = self._parse_go_term_description(GO_term)
                 yield (
                     GO_term, 
                     GO_term, 
@@ -255,9 +255,9 @@ class WheatomicsAdapter:
             else:
                 GO_string = str(row["GO Term"])
                 if GO_string != 'nan':
-                    GO_terms = self.parse_go_terms(GO_string)
+                    GO_terms = self._parse_go_terms(GO_string)
                     for GO_term in GO_terms:
-                        GO_term = self.parse_go_term(GO_term)
+                        GO_term = self._parse_go_term(GO_term)
                         yield (
                             gene_id,
                             GO_term,
@@ -266,20 +266,20 @@ class WheatomicsAdapter:
                 else:
                     continue
                 
-    def parse_go_terms(self, go_terms):
+    def _parse_go_terms(self, go_terms):
         """
         Parse GO terms from a string.
         """
         return go_terms.split(';')
     
-    def parse_go_term(self, go_term):
+    def _parse_go_term(self, go_term):
         """
         Parse GO term from a string.
          """
         go_term = go_term.split('-')[0]
         return go_term.replace(' ', '')
    # Parse GO term description from a string
-    def parse_go_term_description(self, go_term):
+    def _parse_go_term_description(self, go_term):
         """
       Parse GO term description from a string.
          """

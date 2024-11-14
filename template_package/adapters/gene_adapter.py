@@ -162,14 +162,21 @@ class WheatomicsAdapter:
         renan_wheat_genes = renan_wheat_genes.assign(annotation="Renan", genotype="Renan")
 
         self._node_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
-        go_terms = self._read_annotation()
+        
+        go_terms = self._get_annotation_data()
+        self._node_data = pd.concat([self._node_data, go_terms])
         self._edge_data = self._read_homolog_csv()
-    
+
+        print(self._node_data.head())
+        print(self._node_data.tail())
+        # print head of the go_terms data frame
+        print(go_terms.head())
+
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
         # self._node_data = self._get_node_data()
         # self._edge_data = self._get_edge_data()
-
+        
         # # print unique _labels
         # print(f"Unique labels: {self._data['_labels'].unique()}")
 
@@ -207,19 +214,21 @@ class WheatomicsAdapter:
         # get the data from _read_annotation()
         # as a pandas data frame
         data = self._read_annotation()
-        # loop through the data frame and yield each row as a ID GO_TERM DESCRIPTION LABELS tuple
-        GO_string = str(row["GO Term"])
-        if GO_string != 'nan':
-            GO_terms = self._parse_go_terms(GO_string)
-            for GO_term in GO_terms:
-                GO_term = self._parse_go_term(GO_term)
-                DESC = self._parse_go_term_description(GO_term)
-                yield (
-                    GO_term, 
-                    GO_term, 
-                    DESC, 
-                    "GO_term"
-                    )
+        # push result to a dictionary
+        go_terms = []
+        # loop through the data frame and create a new data frame
+        for index, row in data.iterrows():
+            # get the GO terms from the row
+            GO_string = str(row["Gene Ontology"])
+            if GO_string != 'nan':
+                GO_terms = self._parse_go_terms(GO_string)
+                for GO_term in GO_terms:
+                    go_term = self._parse_go_term(GO_term)
+                    DESC = self._parse_go_term_description(GO_term)
+                    # create a new data frame with the GO_term, and description
+                    go_terms.append({'_id': go_term,'GO_term': go_term, 'description': DESC, '_labels':'GO_term'})
+                
+        return pd.DataFrame(go_terms)
     
     
     def _read_annotation(self):
@@ -253,7 +262,7 @@ class WheatomicsAdapter:
             if not gene_id:
                 continue
             else:
-                GO_string = str(row["GO Term"])
+                GO_string = str(row["Gene Ontology"])
                 if GO_string != 'nan':
                     GO_terms = self._parse_go_terms(GO_string)
                     for GO_term in GO_terms:

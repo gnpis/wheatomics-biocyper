@@ -15,6 +15,11 @@ HOMOLOGOUS_TO:
     represented_as: edge
     input_label: HOMOLOGOUS_TO
 
+RELATED_TO:
+    is_a: GeneToGoTermAssociation
+    represented_as: edge
+    input_label: RELATED_TO
+    
 # protein to disease association:
 #     is_a: association
 #     represented_as: edge

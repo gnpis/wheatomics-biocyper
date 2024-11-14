@@ -17,6 +17,7 @@ class WheatomicsAdapterNodeType(Enum):
     GENE = ":Gene"
     TRANSCRIPT = ":Transcript"
     LABELS = "Gene"
+    ONTOLOGY_TERM = ":Ontology_term"
     # OFFICER = ":Officer"
     # LOCATION = ":Location"
     # CRIME = ":Crime"
@@ -37,7 +38,16 @@ class WheatomicsAdapterGeneField(Enum):
     STOP = "stop"
     ANNOTATION = "annotation"
     GENOTYPE = "genotype"
-
+       
+class WheatomicsAdapterOntologyTermField(Enum):
+    """
+    Define possible fields the adapter can provide for annotations.
+     """
+    ID = "_id"
+    GO_TERM = "GO_term"
+    DESCRIPTION = "description"
+    LABELS = "GO_term"
+    
 class WheatomicsAdapterTranscriptField(Enum): #TODO update
     """
     Define possible fields the adapter can provide for officers.
@@ -57,7 +67,9 @@ class WheatomicsAdapterTranscriptField(Enum): #TODO update
     ABUNDANCE = "abundance"
 # TODO complete
 
-
+# Annotation
+# - gene_id
+# - 
 # class WheatomicsAdapterOfficerField(Enum): #TODO update
 #     """
 #     Define possible fields the adapter can provide for officers.
@@ -78,6 +90,7 @@ class WheatomicsAdapterEdgeType(Enum):
     # HAS_TRANSCRIPT = "HAS_TRANSCRIPT" # BETWEEN GENE AND TRANSCRIPT
     HOMOLOGOUS_TO = "HOMOLOGOUS_TO" # BETWEEN 2 GENES
     LABELS = "HOMOLOGOUS_TO"
+    RELATED_TO = "RELATED_TO" # BETWEEN GENE AND ANNOTATION
 
     # MAPPED = "MAPPED" # BETWEEN cs GENES AND GENES OF OTHER ACCESSIONS
     # KNOWS = "KNOWS"
@@ -149,8 +162,9 @@ class WheatomicsAdapter:
         renan_wheat_genes = renan_wheat_genes.assign(annotation="Renan", genotype="Renan")
 
         self._node_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
-
+        go_terms = self._read_annotation()
         self._edge_data = self._read_homolog_csv()
+    
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
         # self._node_data = self._get_node_data()
@@ -161,41 +175,6 @@ class WheatomicsAdapter:
 
         # # print unique _type
         # print(f"Unique types: {self._data['_type'].unique()}")
-
-    def _read_homolog_csv(self, csv_file='data/homology/Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt'):
-        """
-        Read data from CSV file.
-        """
-
-        logger.info("Reading homolog data from CSV file.")
-
-        data = pd.read_csv(csv_file, dtype=str, sep='\t')
-
-        for index, row in data.iterrows():
-            # if row["_labels"] not in self.node_types:
-            #     continue
-
-            wheat_gene_stable_id = str(row["Gene stable ID"])
-            arabidopsis_gene_id = str(row["Arabidopsis thaliana gene stable ID"])
-            japonica_gene_id = str(row["Oryza sativa Japonica Group gene stable ID"])
-
-            if arabidopsis_gene_id != 'nan':
-                yield (
-                    wheat_gene_stable_id,
-                    arabidopsis_gene_id,
-                    'HOMOLOGOUS_TO'
-                )
-            if japonica_gene_id != 'nan':
-                yield (
-                    wheat_gene_stable_id,
-                    japonica_gene_id,
-                    'HOMOLOGOUS_TO'
-                )
-
-        # rename 'id' to 'hash'
-        data.rename(columns={"id": "hash"}, inplace=True)
-
-        return data
 
     def _read_homolog_csv(self, csv_file='data/homology/Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt'):
         """
@@ -219,7 +198,95 @@ class WheatomicsAdapter:
         # Create a new DataFrame from the gene pairs
         result_df = pd.DataFrame(gene_pairs, columns=['source', 'target', '_type'])
         return result_df
-
+ 
+    def _get_annotation_data(self):
+        """
+        Get GO terms from _read_annotation()
+        """
+        logger.info("Reading annotation data.")
+        # get the data from _read_annotation()
+        # as a pandas data frame
+        data = self._read_annotation()
+        # loop through the data frame and yield each row as a ID GO_TERM DESCRIPTION LABELS tuple
+        GO_string = str(row["GO Term"])
+        if GO_string != 'nan':
+            GO_terms = self.parse_go_terms(GO_string)
+            for GO_term in GO_terms:
+                GO_term = self.parse_go_term(GO_term)
+                DESC = self.parse_go_term_description(GO_term)
+                yield (
+                    GO_term, 
+                    GO_term, 
+                    DESC, 
+                    "GO_term"
+                    )
+    
+    
+    def _read_annotation(self):
+        """
+        Read data from CSV file.
+        """
+        logger.info("Reading annotation data.")
+        data = pd.read_csv('data/OryzabaseGeneListEn_20241017010108.txt', sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
+        data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
+            'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True) 
+        return data
+    
+    def _get_homolog_data(self):
+        logger.info("Reading homolog data.")
+        self._data = self._read_homolog_csv()
+        
+    def _read_oryzabase_csv(self):
+        """
+        Read data from CSV file.
+        """
+        logger.info(f"Reading oryzabase annotation data from CSV file.")
+       # call _read_annotation() to get the data
+        data = self._read_annotation()
+        # data = pd.read_csv(csv_file, sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
+        # data.fillna('', inplace=True)
+        # data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
+            # 'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True)
+        # loop through the data frame and yield each row as a triple of gene_id, field, value
+        for index, row in data.iterrows():
+            gene_id = str(row["RAP ID"])
+            if not gene_id:
+                continue
+            else:
+                GO_string = str(row["GO Term"])
+                if GO_string != 'nan':
+                    GO_terms = self.parse_go_terms(GO_string)
+                    for GO_term in GO_terms:
+                        GO_term = self.parse_go_term(GO_term)
+                        yield (
+                            gene_id,
+                            GO_term,
+                            'RELATED_TO'
+                        )
+                else:
+                    continue
+                
+    def parse_go_terms(self, go_terms):
+        """
+        Parse GO terms from a string.
+        """
+        return go_terms.split(';')
+    
+    def parse_go_term(self, go_term):
+        """
+        Parse GO term from a string.
+         """
+        go_term = go_term.split('-')[0]
+        return go_term.replace(' ', '')
+   # Parse GO term description from a string
+    def parse_go_term_description(self, go_term):
+        """
+      Parse GO term description from a string.
+         """
+        description = go_term.split('-')[-1].strip()
+        return description.replace('   ', '')
+    
+   
     def _read_gene_csv(self, csv_file):
         """
         Read data from CSV file.
@@ -235,7 +302,7 @@ class WheatomicsAdapter:
         data = data.map(lambda x: x.replace('"', "") if isinstance(x, str) else x)
 
         # rename 'id' to 'hash'
-        data.rename(columns={"id": "hash"}, inplace=True)
+        data.rename(columns={"Gene stable ID": "hash"}, inplace=True)
 
         return data
 

@@ -162,13 +162,13 @@ class WheatomicsAdapter:
 
         self._node_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
         
-        self.go_terms = self._get_annotation_data()
+        self._go_terms = self._get_annotation_data()
         self._edge_data = self._read_homolog_csv()
-
-        print(self._node_data.head())
-        print(self._node_data.tail())
+        self._oryzabase_annotations = self._read_oryzabase_csv()
+        #print(self._node_data.head())
+        #print(self._node_data.tail())
         # print head of the go_terms data frame
-        print(self.go_terms.head())
+        #print(self.go_terms.head())
 
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
@@ -257,6 +257,7 @@ class WheatomicsAdapter:
         # loop through the data frame and yield each row as a triple of gene_id, field, value
         for index, row in data.iterrows():
             gene_id = str(row["RAP ID"])
+            go_annotations = []
             if not gene_id:
                 continue
             else:
@@ -265,14 +266,11 @@ class WheatomicsAdapter:
                     GO_terms = self._parse_go_terms(GO_string)
                     for GO_term in GO_terms:
                         GO_term = self._parse_go_term(GO_term)
-                        yield (
-                            gene_id,
-                            GO_term,
-                            'RELATED_TO'
-                        )
+                        go_annotations.append({'source': gene_id, 'target': GO_term, '_type': 'RELATED_TO'})
                 else:
                     continue
-                
+        return pd.DataFrame(go_annotations)
+    
     def _parse_go_terms(self, go_terms):
         """
         Parse GO terms from a string.
@@ -387,7 +385,7 @@ class WheatomicsAdapter:
                 _type,
                 _props,
             )
-        for index, row in self.go_terms.iterrows():
+        for index, row in self._go_terms.iterrows():
             if row["_labels"] not in self.node_types:
                 continue
             
@@ -412,6 +410,18 @@ class WheatomicsAdapter:
 
         logger.info("Generating edges.")
         for index, row in self._edge_data.iterrows():
+            # if row["_type"] not in self.edge_types:
+            #     continue
+            _id = None
+            _props = {}
+            yield(
+                _id,
+                row['source'],
+                row['target'],
+                row['_type'],
+                _props
+            )
+        for index, row in self._oryzabase_annotations.iterrows():
             # if row["_type"] not in self.edge_types:
             #     continue
             _id = None

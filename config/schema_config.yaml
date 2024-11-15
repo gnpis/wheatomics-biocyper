@@ -19,3 +19,13 @@ HOMOLOGOUS_TO:
 #     is_a: association
 #     represented_as: edge
 #     input_label: protein_disease_association
+
+transcript:
+    represented_as: node
+    preferred_id: ensembl
+    input_label: Transcript
+
+HAS_TRANSCRIPT:
+    is_a: TranscriptToGeneRelationship
+    represented_as: edge
+    input_label: HAS_TRANSCRIPT

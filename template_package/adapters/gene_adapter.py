@@ -168,8 +168,11 @@ class WheatomicsAdapter:
         #print(self._node_data.head())
         #print(self._node_data.tail())
         # print head of the go_terms data frame
-        #print(self.go_terms.head())
-
+        print(self._go_terms.head())
+        self._goa = self._read_goa_csv()
+        print(self._goa.head())
+        # print head of the edge data frame
+        #print(self._edge_data.head())
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
         # self._node_data = self._get_node_data()
@@ -228,7 +231,7 @@ class WheatomicsAdapter:
                 
         return pd.DataFrame(go_terms)
     
-    
+ 
     def _read_annotation(self):
         """
         Read data from CSV file.
@@ -292,7 +295,31 @@ class WheatomicsAdapter:
         description = description.replace("'", "") 
         return description.replace('   ', '')
     
-   
+      # read the annotation data goa file
+    # and return a pandas dataframe
+    def _read_goa_csv(self, csv_file='data/goa/tair_annotations.gaf'):
+        """
+        Read data from CSV file.
+        """
+        logger.info("Reading annotation data.")
+        # read the csv file
+        # skip line starting with '!'
+        # define names of the columns automatically with a prefix
+        # define the data types of each column
+        # skip blank lines  
+        # skip lines starting with '!'
+        goa = pd.read_csv(csv_file, sep='\t', delimiter=None, dtype='str', skip_blank_lines=True, comment='!', header=None)
+        goa.rename('col_{}'.format, axis=1, inplace=True)
+        # remove all columns except col_1 and col_4
+        goa_clean = goa.loc[:, goa.columns.intersection(['col_1','col_4'])]
+        goa_clean = goa_clean.assign(_labels='GO_term') # add new _labels column with Gene value 
+        goa_clean['GO_term'] = goa_clean['col_4']
+        # rename the columns col_4 to _id
+        goa_clean.rename(columns={"col_4": "_id"}, inplace=True)
+        # add a new column description with the value empty string
+        goa_clean['description'] = ''
+        return goa_clean
+    
     def _read_gene_csv(self, csv_file):
         """
         Read data from CSV file.
@@ -398,7 +425,18 @@ class WheatomicsAdapter:
                 _type,
                 _props,
             )
+        for index, row in self._goa.iterrows():
+            if row["_labels"] not in self.node_types:
+                continue
             
+            _id = row["_id"]
+            _type = row["_labels"]
+            _props = row.to_dict()
+            yield (
+                _id,
+                 _type,
+                 _props,
+             )
 
     def get_edges(self):
         """

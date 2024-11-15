@@ -289,6 +289,7 @@ class WheatomicsAdapter:
       Parse GO term description from a string.
          """
         description = go_term.split('-')[-1].strip()
+        description = description.replace("'", "") 
         return description.replace('   ', '')
     
    

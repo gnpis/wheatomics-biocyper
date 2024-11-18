@@ -169,7 +169,7 @@ class WheatomicsAdapter:
         #print(self._node_data.tail())
         # print head of the go_terms data frame
         print(self._go_terms.head())
-        self._goa = self._read_goa_csv()
+        self._goa = self._get_goa_go_term()
         print(self._goa.head())
         # print head of the edge data frame
         #print(self._edge_data.head())
@@ -312,13 +312,21 @@ class WheatomicsAdapter:
         goa.rename('col_{}'.format, axis=1, inplace=True)
         # remove all columns except col_1 and col_4
         goa_clean = goa.loc[:, goa.columns.intersection(['col_1','col_4'])]
-        goa_clean = goa_clean.assign(_labels='GO_term') # add new _labels column with Gene value 
-        goa_clean['GO_term'] = goa_clean['col_4']
-        # rename the columns col_4 to _id
-        goa_clean.rename(columns={"col_4": "_id"}, inplace=True)
-        # add a new column description with the value empty string
-        goa_clean['description'] = ''
         return goa_clean
+    
+    def _get_goa_go_term(self):
+        # read the annotation data goa file
+        # and return a pandas dataframe
+        goa = self._read_goa_csv()
+        goa = goa.assign(_labels='GO_term') # add new _labels column with Gene value 
+        # drop col_1
+        goa.drop(['col_1'], axis=1, inplace=True)
+        goa['GO_term'] = goa['col_4']
+        # rename the columns col_4 to _id
+        goa.rename(columns={"col_4": "_id"}, inplace=True)
+        # add a new column description with the value empty string
+        goa['description'] = '' 
+        return goa
     
     def _read_gene_csv(self, csv_file):
         """

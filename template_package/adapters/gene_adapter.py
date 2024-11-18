@@ -160,23 +160,26 @@ class WheatomicsAdapter:
         renan_wheat_genes['_id'] = renan_wheat_genes['gene_id']
         renan_wheat_genes = renan_wheat_genes.assign(annotation="Renan", genotype="Renan")
 
-        self._node_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
+        self._gene_nodes = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
         
         self._go_terms = self._get_annotation_data()
-        self._edge_data = self._read_homolog_csv()
+        self._goa_go_terms = self._get_goa_go_term()
+        
+        
         self._oryzabase_annotations = self._read_oryzabase_csv()
+        self._gene_edges = self._read_homolog_csv()
+        self._annotation_edges = self._get_goa_annotation()
         #print(self._node_data.head())
         #print(self._node_data.tail())
         # print head of the go_terms data frame
-        print(self._go_terms.head())
-        self._goa = self._get_goa_go_term()
-        print(self._goa.head())
+        # print(self._go_terms.head())
+        # print(self._goa.head())
         # print head of the edge data frame
         #print(self._edge_data.head())
         # self._data_homologs = self._read_csv(csv_file="homology.csv")
         # self._data = self._read_csv()
-        # self._node_data = self._get_node_data()
-        # self._edge_data = self._get_edge_data()
+        self._node_data = self.get_nodes()
+        self._edge_data = self.get_edges()
         
         # # print unique _labels
         # print(f"Unique labels: {self._data['_labels'].unique()}")
@@ -327,7 +330,15 @@ class WheatomicsAdapter:
         # add a new column description with the value empty string
         goa['description'] = '' 
         return goa
-    
+    def _get_goa_annotation(self):
+        annotation = self._read_goa_csv()
+        # rename the columns col_1 to source and col_4 to target
+        annotation.rename(columns={"col_1": "source", "col_4": "target"}, inplace=True)
+        # add a new column _type with the value RELATED_TO
+        annotation['_type'] = 'RELATED_TO'
+        return annotation
+        
+        
     def _read_gene_csv(self, csv_file):
         """
         Read data from CSV file.
@@ -402,7 +413,7 @@ class WheatomicsAdapter:
 
         logger.info("Generating nodes.")
         # nodes: tuples of id, type, fields
-        it=self._node_data.iterrows()
+        it=self._gene_nodes.iterrows()
         for index, row in it:
             if row["_labels"] not in self.node_types:
                 continue
@@ -433,7 +444,7 @@ class WheatomicsAdapter:
                 _type,
                 _props,
             )
-        for index, row in self._goa.iterrows():
+        for index, row in self._goa_go_terms.iterrows():
             if row["_labels"] not in self.node_types:
                 continue
             
@@ -456,7 +467,7 @@ class WheatomicsAdapter:
         """
 
         logger.info("Generating edges.")
-        for index, row in self._edge_data.iterrows():
+        for index, row in self._gene_edges.iterrows():
             # if row["_type"] not in self.edge_types:
             #     continue
             _id = None
@@ -469,6 +480,18 @@ class WheatomicsAdapter:
                 _props
             )
         for index, row in self._oryzabase_annotations.iterrows():
+            # if row["_type"] not in self.edge_types:
+            #     continue
+            _id = None
+            _props = {}
+            yield(
+                _id,
+                row['source'],
+                row['target'],
+                row['_type'],
+                _props
+            )
+        for index, row in self._annotation_edges.iterrows():
             # if row["_type"] not in self.edge_types:
             #     continue
             _id = None

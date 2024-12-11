@@ -441,8 +441,8 @@ class WheatomicsAdapter:
             # get the GO terms from the row
             go_string = str(row["Gene Ontology"])
             if go_string != 'nan':
-                go_terms = self._parse_go_terms(go_string)
-                for go_term in go_terms:
+                _go_terms = self._parse_go_terms(go_string)
+                for go_term in _go_terms:
                     # create a new data frame with the GO_term, and description
                     go_terms.append({'_id': go_term[0],'GO_term': go_term[0], 'description': go_term[1].replace("'","prime"), '_labels':'GO_term'})
 

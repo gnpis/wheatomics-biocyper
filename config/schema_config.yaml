@@ -4,13 +4,27 @@ gene:
   represented_as: node
   preferred_id: ensembl
   input_label: Gene
+  properties:
+    annotation: str
+    chromosome: str
+    gene_id: str
+    genotype: str
+    id: str
+    preferred_id: str
+    start: int
+    stop: int
 
 go term:
+  aliases: ['gene ontology', 'function']
   # is_a: named thing
   is_a: ontology class
   represented_as: node
   preferred_id: go
   input_label: GO_term
+  properties:
+    GO_term: str
+    description: str
+    id: str
 
 HOMOLOGOUS_TO:
   is_a: association
@@ -23,12 +37,29 @@ RELATED_TO:
   input_label: RELATED_TO
     
 transcript:
+  aliases: ['mRNA']
   represented_as: node
   preferred_id: ensembl
   input_label: Transcript
+  properties:
+    Reference: str
+    preferred_id: str
+    ref_gene_id: str
 
 HAS_TRANSCRIPT:
+  aliases: ['is expressed']
   # is_a: TranscriptToGeneRelationship
   is_a: transcript to gene relationship
   represented_as: edge
   input_label: HAS_TRANSCRIPT
+  target: transcript
+  source: gene
+  properties:
+    Coverage: float
+    End: int
+    FPKM: float
+    Gene Name: str
+    Reference: str
+    Start: int
+    Strand: str
+    TPM: float

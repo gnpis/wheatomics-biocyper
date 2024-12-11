@@ -1,42 +1,34 @@
 # add your desired knowledge graph components here
 
 gene:
-    represented_as: node
-    preferred_id: ensembl
-    input_label: Gene
+  represented_as: node
+  preferred_id: ensembl
+  input_label: Gene
 
 go term:
-    is_a: ontology class
-    represented_as: node
-    preferred_id: go
-    input_label: GO_term
-
-# disease:
-#     represented_as: node
-#     preferred_id: doid
-#     input_label: do_disease
+  # is_a: named thing
+  is_a: ontology class
+  represented_as: node
+  preferred_id: go
+  input_label: GO_term
 
 HOMOLOGOUS_TO:
-    is_a: association
-    represented_as: edge
-    input_label: HOMOLOGOUS_TO
+  is_a: association
+  represented_as: edge
+  input_label: HOMOLOGOUS_TO
 
 RELATED_TO:
-    is_a: association
-    represented_as: edge
-    input_label: RELATED_TO
+  is_a: association
+  represented_as: edge
+  input_label: RELATED_TO
     
-# protein to disease association:
-#     is_a: association
-#     represented_as: edge
-#     input_label: protein_disease_association
-
 transcript:
-    represented_as: node
-    preferred_id: ensembl
-    input_label: Transcript
+  represented_as: node
+  preferred_id: ensembl
+  input_label: Transcript
 
 HAS_TRANSCRIPT:
-    is_a: TranscriptToGeneRelationship
-    represented_as: edge
-    input_label: HAS_TRANSCRIPT
+  # is_a: TranscriptToGeneRelationship
+  is_a: transcript to gene relationship
+  represented_as: edge
+  input_label: HAS_TRANSCRIPT

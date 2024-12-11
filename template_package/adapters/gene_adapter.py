@@ -1,5 +1,6 @@
 import random
 import os
+import re
 import string
 import time
 import glob
@@ -17,8 +18,8 @@ class WheatomicsAdapterNodeType(Enum):
     Define types of nodes the adapter can provide.
     """
 
-    GENE = ":Gene"
-    TRANSCRIPT = ":Transcript"
+    GENE = "Gene"
+    TRANSCRIPT = "Transcript"
     LABELS = "Gene"
     ONTOLOGY_TERM = "GO_term"
     # OFFICER = ":Officer"
@@ -132,7 +133,7 @@ class WheatomicsAdapter:
         edge_fields: Optional[list] = None,
     ):
         self._set_types_and_fields(node_types, node_fields, edge_types, edge_fields)
-        
+
         # Define a constant for the columns to be renamed
         RENAME_COLUMNS = {
             "Gene stable ID": "gene_id",
@@ -165,6 +166,13 @@ class WheatomicsAdapter:
             genotype="Chinese Spring"
         )
 
+        # csv2_wheat_genes = pd.DataFrame()
+        csv2_wheat_genes = self.process_wheat_csv2_gene_data(
+            csv_file="data/gene/iwgsc_refseqv2.1_annotation_200916_HC.gff3",
+            annotation="CSv2.1",
+            genotype="Chinese spring"
+        )
+
         renan_wheat_genes = self.process_gene_data(
             csv_file="data/gene/TaeRenan_refseqv2.1_genesHC.tsv",
             drop_columns=[],
@@ -176,7 +184,7 @@ class WheatomicsAdapter:
         # TODO: fix some glitches in rice homologs:
         # TraesCS7A02G230600		gene-rps8	HOMOLOGOUS_TO
 
-        self._node_genes_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes])
+        self._node_genes_data = pd.concat([rice_genes, ath_genes, csv1_wheat_genes, renan_wheat_genes, csv2_wheat_genes])
 
         self._edge_data = self._read_homolog_csv()
         wheat_homologs_df = self._read_wheat_homolog_csv()
@@ -213,8 +221,38 @@ class WheatomicsAdapter:
         
         
         self._oryzabase_annotations = self._read_oryzabase_csv()
-        self._gene_edges = self._read_homolog_csv()
         self._annotation_edges = self._get_goa_annotation()
+
+    def process_wheat_csv2_gene_data(self, csv_file, genotype, annotation):
+
+        gff_df = pd.read_csv(
+            csv_file,
+            sep="\t",
+            comment="#",
+            header=None,
+            names=["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
+        )
+
+        # Filter only rows where the type is 'gene'
+        genes_df = gff_df[gff_df['type'] == 'gene'].copy()
+        
+        # Extract relevant information from the attributes column for the ID
+        # genes_df['ID'] = genes_df['attributes'].str.extract(r'ID=([^;]+)')
+        genes_df.loc[:, 'ID'] = genes_df['attributes'].str.extract(r'ID=([^;]+)')
+        genes_df['_id'] = genes_df['ID']
+        
+        # gene_id chromosome      start   stop    _labels _id     annotation      genotype        ID      Chromosome
+        # Os02g0788600    2       33502431        33505888        Gene    Os02g0788600    irgsp1  Oryza sativa japonica
+
+        # Create the desired output DataFrame
+        output_df = genes_df[['ID', 'seqid', 'start', 'end', '_id']].rename(columns={
+            "ID": "gene_id",
+            "seqid": "chromosome",
+            "start": "start",
+            "end": "stop"
+        }).assign(annotation=annotation,genotype=genotype,_labels=WheatomicsAdapterNodeType.GENE.value) # add new _labels column with Gene value
+
+        return output_df
 
     def process_gene_data(self, csv_file, drop_columns, rename_columns, annotation, genotype):
         genes = self._read_gene_csv(csv_file=csv_file)
@@ -223,8 +261,8 @@ class WheatomicsAdapter:
         genes.rename(columns=rename_columns, inplace=True)
         genes['_id'] = genes['gene_id']
         genes = genes.assign(annotation=annotation, genotype=genotype)
-        
         return genes
+
     def _find_file_pairs(self, directory):
         # Get a list of all files ending with 'refmap' or 'abundance.tsv' in the given directory
         files = [os.path.join(directory, f) for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and (f.endswith("refmap") or f.endswith("abundance.tsv"))]
@@ -236,6 +274,7 @@ class WheatomicsAdapter:
             if len(file_pairs) == 2:
                 yield(file_pairs)
                 file_pairs = []
+                # break # TODO remove, for debug only
 
     def _read_transcript_csv(self, csv_dir):
         """
@@ -350,8 +389,6 @@ class WheatomicsAdapter:
 
         # Start the timer
         start_time = time.time()
-        expanded_rows = []
-        
 
         # Create a new DataFrame with the expanded rows
         result_df = pd.DataFrame()
@@ -374,8 +411,8 @@ class WheatomicsAdapter:
         """
         Read data from CSV file.
         """
-#         Gene stable ID	Chromosome/scaffold name	Gene start (bp)	Gene end (bp)	Gene type	Gene description	UniProtKB Gene Name symbol	UniProtKB Gene Name ID
-# Os02g0788600	2	33502431	33505888	protein_coding			
+        #         Gene stable ID	Chromosome/scaffold name	Gene start (bp)	Gene end (bp)	Gene type	Gene description	UniProtKB Gene Name symbol	UniProtKB Gene Name ID
+        # Os02g0788600	2	33502431	33505888	protein_coding			
         logger.info(f"Reading gene data from CSV file: {csv_file}.")
 
         data = pd.read_csv(csv_file, dtype=str, sep='\t')
@@ -402,24 +439,22 @@ class WheatomicsAdapter:
         # loop through the data frame and create a new data frame
         for index, row in data.iterrows():
             # get the GO terms from the row
-            GO_string = str(row["Gene Ontology"])
-            if GO_string != 'nan':
-                GO_terms = self._parse_go_terms(GO_string)
-                for GO_term in GO_terms:
-                    go_term = self._parse_go_term(GO_term)
-                    DESC = self._parse_go_term_description(GO_term)
+            go_string = str(row["Gene Ontology"])
+            if go_string != 'nan':
+                go_terms = self._parse_go_terms(go_string)
+                for go_term in go_terms:
                     # create a new data frame with the GO_term, and description
-                    go_terms.append({'_id': go_term,'GO_term': go_term, 'description': DESC, '_labels':'GO_term'})
-                
+                    go_terms.append({'_id': go_term[0],'GO_term': go_term[0], 'description': go_term[1].replace("'","prime"), '_labels':'GO_term'})
+
         return pd.DataFrame(go_terms)
-    
- 
+
     def _read_annotation(self):
         """
         Read data from CSV file.
         """
-        logger.info("Reading annotation data.")
-        data = pd.read_csv('data/goa/OryzabaseGeneListEn_20241017010108.txt', sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
+        oryza_annotation_file = "data/goa/OryzabaseGeneListEn_20241017010108.txt"
+        logger.info(f"Reading annotation data from { oryza_annotation_file }.")
+        data = pd.read_csv(oryza_annotation_file, sep='\t', delimiter=None, dtype='str', skip_blank_lines=True, escapechar='\\')
         data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
             'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True) 
         return data
@@ -428,35 +463,50 @@ class WheatomicsAdapter:
         """
         Read data from CSV file.
         """
-        logger.info(f"Reading oryzabase annotation data from CSV file.")
-       # call _read_annotation() to get the data
+        logger.info("Reading oryzabase annotation data from CSV file to create edges.")
         data = self._read_annotation()
-        # data = pd.read_csv(csv_file, sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
-        # data.fillna('', inplace=True)
-        # data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
-            # 'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True)
-        # loop through the data frame and yield each row as a triple of gene_id, field, value
+        go_annotations = []
         for index, row in data.iterrows():
-            gene_id = str(row["RAP ID"])
-            go_annotations = []
-            if not gene_id:
+            gene_id = row["RAP ID"]
+            if pd.isna(row["RAP ID"]) or pd.isnull(row["RAP ID"]):
                 continue
             else:
-                GO_string = str(row["Gene Ontology"])
-                if GO_string != 'nan':
-                    GO_terms = self._parse_go_terms(GO_string)
-                    for GO_term in GO_terms:
-                        GO_term = self._parse_go_term(GO_term)
-                        go_annotations.append({'source': gene_id, 'target': GO_term, '_type': 'RELATED_TO'})
+                go_string = str(row["Gene Ontology"])
+                if go_string != 'nan':
+                    go_terms = self._parse_go_terms(go_string)
+                    for go_term in go_terms:
+                        go_annotations.append({'source': gene_id.strip(), 'target': go_term[0], '_type': 'RELATED_TO'})
                 else:
                     continue
-        return pd.DataFrame(go_annotations)
+        
+        df = pd.DataFrame(go_annotations)
+
+        # Add double quotes to all string fields using apply with axis=1
+        df = df.apply(lambda row: row.map(lambda x: f'"{x}"' if isinstance(x, str) else x), axis=1)
+        return df.copy()
     
     def _parse_go_terms(self, go_terms):
         """
-        Parse GO terms from a string.
+        Parse GO terms from a string using a Regular Expression:
+
+        (GO:\d{7}):
+            Matches the GO term (GO: followed by 7 digits).
+
+        - (.*?):
+            Matches the description part after the GO term and hyphen.
+            The .*? ensures a non-greedy match to capture the description until the next GO term.
+
+        (?=, GO:\d{7}|\Z):
+            Positive lookahead to ensure the match stops at:
+                , GO:\d{7}: The next GO term.
+                \Z: The end of the string.
         """
-        return go_terms.split(';')
+        # Split the string into GO term and description pairs
+        # pattern = r'(GO:\d{7}) - ([^,]+(?:, [^,]+)*)'
+        pattern = r'(GO:\d{7}) - (.*?)(?=, GO:\d{7}|\Z)'
+        
+        matches = re.findall(pattern, go_terms)
+        return matches
     
     def _parse_go_term(self, go_term):
         """
@@ -464,6 +514,7 @@ class WheatomicsAdapter:
          """
         go_term = go_term.split('-')[0]
         return go_term.replace(' ', '')
+
    # Parse GO term description from a string
     def _parse_go_term_description(self, go_term):
         """
@@ -473,11 +524,9 @@ class WheatomicsAdapter:
         description = description.replace("'", "") 
         return description.replace('   ', '')
     
-      # read the annotation data goa file
-    # and return a pandas dataframe
     def _read_goa_csv(self, csv_file='data/goa/tair_annotations.gaf'):
         """
-        Read data from CSV file.
+        Read the annotation data goa file and return a pandas dataframe
         """
         logger.info("Reading annotation data.")
         # read the csv file

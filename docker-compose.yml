@@ -34,6 +34,8 @@ services:
     container_name: deploy
     volumes:
       - biocypher_neo4j_volume:/data
+    networks:
+      - biochatter
     environment:
       NEO4J_dbms_security_auth__enabled: "false"
       NEO4J_dbms_databases_default__to__read__only: "false"
@@ -45,5 +47,28 @@ services:
       import:
         condition: service_completed_successfully
 
+  app:
+    image: biocypher/biochatter-light:0.6.10
+    container_name: app
+    ports:
+      - "8501:8501"
+    networks:
+      - biochatter
+    depends_on:
+      import:
+        condition: service_completed_successfully
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DOCKER_COMPOSE=true
+      - CHAT_TAB=false
+      - PROMPT_ENGINEERING_TAB=false
+      - RAG_TAB=false
+      - CORRECTING_AGENT_TAB=false
+      - KNOWLEDGE_GRAPH_TAB=true
+
 volumes:
   biocypher_neo4j_volume:
+
+
+networks:
+  biochatter:

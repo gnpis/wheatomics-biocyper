@@ -20,6 +20,7 @@ class WheatomicsAdapterNodeType(Enum):
     GENE = ":Gene"
     TRANSCRIPT = ":Transcript"
     LABELS = "Gene"
+    ONTOLOGY_TERM = "GO_term"
     # OFFICER = ":Officer"
     # LOCATION = ":Location"
     # CRIME = ":Crime"
@@ -40,6 +41,15 @@ class WheatomicsAdapterGeneField(Enum):
     STOP = "stop"
     ANNOTATION = "annotation"
     GENOTYPE = "genotype"
+
+class WheatomicsAdapterOntologyTermField(Enum):
+    """
+    Define possible fields the adapter can provide for annotations.
+     """
+    ID = "_id"
+    GO_TERM = "GO_term"
+    DESCRIPTION = "description"
+    LABELS = "GO_term"
 
 class WheatomicsAdapterTranscriptField(Enum): #TODO update
     """
@@ -84,6 +94,7 @@ class WheatomicsAdapterEdgeType(Enum):
     HAS_TRANSCRIPT = "HAS_TRANSCRIPT" # BETWEEN GENE AND TRANSCRIPT
     HOMOLOGOUS_TO = "HOMOLOGOUS_TO" # BETWEEN 2 GENES
     LABELS = "HOMOLOGOUS_TO"
+    RELATED_TO = "RELATED_TO" # BETWEEN GENE AND ANNOTATION
 
     # MAPPED = "MAPPED" # BETWEEN cs GENES AND GENES OF OTHER ACCESSIONS
     # KNOWS = "KNOWS"
@@ -196,6 +207,14 @@ class WheatomicsAdapter:
         end_time = time.time()
         execution_time = end_time - start_time
         logger.info(f"The _read_transcript_csv method took {execution_time} seconds to execute.")
+        
+        self._go_terms = self._get_annotation_data()
+        self._goa_go_terms = self._get_goa_go_term()
+        
+        
+        self._oryzabase_annotations = self._read_oryzabase_csv()
+        self._gene_edges = self._read_homolog_csv()
+        self._annotation_edges = self._get_goa_annotation()
 
     def process_gene_data(self, csv_file, drop_columns, rename_columns, annotation, genotype):
         genes = self._read_gene_csv(csv_file=csv_file)
@@ -369,6 +388,130 @@ class WheatomicsAdapter:
         data.rename(columns={"id": "hash"}, inplace=True)
 
         return data
+ 
+    def _get_annotation_data(self):
+        """
+        Get GO terms from _read_annotation()
+        """
+        logger.info("Reading annotation data.")
+        # get the data from _read_annotation()
+        # as a pandas data frame
+        data = self._read_annotation()
+        # push result to a dictionary
+        go_terms = []
+        # loop through the data frame and create a new data frame
+        for index, row in data.iterrows():
+            # get the GO terms from the row
+            GO_string = str(row["Gene Ontology"])
+            if GO_string != 'nan':
+                GO_terms = self._parse_go_terms(GO_string)
+                for GO_term in GO_terms:
+                    go_term = self._parse_go_term(GO_term)
+                    DESC = self._parse_go_term_description(GO_term)
+                    # create a new data frame with the GO_term, and description
+                    go_terms.append({'_id': go_term,'GO_term': go_term, 'description': DESC, '_labels':'GO_term'})
+                
+        return pd.DataFrame(go_terms)
+    
+ 
+    def _read_annotation(self):
+        """
+        Read data from CSV file.
+        """
+        logger.info("Reading annotation data.")
+        data = pd.read_csv('data/goa/OryzabaseGeneListEn_20241017010108.txt', sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
+        data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
+            'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True) 
+        return data
+        
+    def _read_oryzabase_csv(self):
+        """
+        Read data from CSV file.
+        """
+        logger.info(f"Reading oryzabase annotation data from CSV file.")
+       # call _read_annotation() to get the data
+        data = self._read_annotation()
+        # data = pd.read_csv(csv_file, sep='\t', delimiter=None, dtype='str', skip_blank_lines=True)
+        # data.fillna('', inplace=True)
+        # data.drop(['CGSNL Gene Symbol','Gene symbol synonym(s)','CGSNL Gene Name','Gene name synonym(s)',\
+            # 'Protein Name','Allele','Chromosome No.','Explanation','Trait Class','Gramene ID','Arm','Locate(cM)'], axis=1, inplace=True)
+        # loop through the data frame and yield each row as a triple of gene_id, field, value
+        for index, row in data.iterrows():
+            gene_id = str(row["RAP ID"])
+            go_annotations = []
+            if not gene_id:
+                continue
+            else:
+                GO_string = str(row["Gene Ontology"])
+                if GO_string != 'nan':
+                    GO_terms = self._parse_go_terms(GO_string)
+                    for GO_term in GO_terms:
+                        GO_term = self._parse_go_term(GO_term)
+                        go_annotations.append({'source': gene_id, 'target': GO_term, '_type': 'RELATED_TO'})
+                else:
+                    continue
+        return pd.DataFrame(go_annotations)
+    
+    def _parse_go_terms(self, go_terms):
+        """
+        Parse GO terms from a string.
+        """
+        return go_terms.split(';')
+    
+    def _parse_go_term(self, go_term):
+        """
+        Parse GO term from a string.
+         """
+        go_term = go_term.split('-')[0]
+        return go_term.replace(' ', '')
+   # Parse GO term description from a string
+    def _parse_go_term_description(self, go_term):
+        """
+      Parse GO term description from a string.
+         """
+        description = go_term.split('-')[-1].strip()
+        description = description.replace("'", "") 
+        return description.replace('   ', '')
+    
+      # read the annotation data goa file
+    # and return a pandas dataframe
+    def _read_goa_csv(self, csv_file='data/goa/tair_annotations.gaf'):
+        """
+        Read data from CSV file.
+        """
+        logger.info("Reading annotation data.")
+        # read the csv file
+        # skip line starting with '!'
+        # define names of the columns automatically with a prefix
+        # define the data types of each column
+        # skip blank lines  
+        # skip lines starting with '!'
+        goa = pd.read_csv(csv_file, sep='\t', delimiter=None, dtype='str', skip_blank_lines=True, comment='!', header=None)
+        goa.rename('col_{}'.format, axis=1, inplace=True)
+        # remove all columns except col_1 and col_4
+        goa_clean = goa.loc[:, goa.columns.intersection(['col_1','col_4'])]
+        return goa_clean
+    
+    def _get_goa_go_term(self):
+        # read the annotation data goa file
+        # and return a pandas dataframe
+        goa = self._read_goa_csv()
+        goa = goa.assign(_labels='GO_term') # add new _labels column with Gene value 
+        # drop col_1
+        goa.drop(['col_1'], axis=1, inplace=True)
+        goa['GO_term'] = goa['col_4']
+        # rename the columns col_4 to _id
+        goa.rename(columns={"col_4": "_id"}, inplace=True)
+        # add a new column description with the value empty string
+        goa['description'] = '' 
+        return goa
+    def _get_goa_annotation(self):
+        annotation = self._read_goa_csv()
+        # rename the columns col_1 to source and col_4 to target
+        annotation.rename(columns={"col_1": "source", "col_4": "target"}, inplace=True)
+        # add a new column _type with the value RELATED_TO
+        annotation['_type'] = 'RELATED_TO'
+        return annotation
 
     def _get_node_data(self):
         """
@@ -455,6 +598,32 @@ class WheatomicsAdapter:
                 _type,
                 _props,
             )
+        logger.info(f"Generating {len(self._go_terms)} go terms nodes.")
+        for index, row in self._go_terms.iterrows():
+            if row["_labels"] not in self.node_types:
+                continue
+            
+            _id = row["_id"]
+            _type = row["_labels"]
+            _props = row.to_dict()
+            yield (
+                _id,
+                _type,
+                _props,
+            )
+        logger.info(f"Generating {len(self._goa_go_terms)} goa go terms nodes.")
+        for index, row in self._goa_go_terms.iterrows():
+            if row["_labels"] not in self.node_types:
+                continue
+            
+            _id = row["_id"]
+            _type = row["_labels"]
+            _props = row.to_dict()
+            yield (
+                _id,
+                 _type,
+                 _props,
+             )
 
     def get_edges(self):
         """
@@ -494,6 +663,30 @@ class WheatomicsAdapter:
                     row['_type'],
                     _props
                 )
+        for index, row in self._oryzabase_annotations.iterrows():
+            # if row["_type"] not in self.edge_types:
+            #     continue
+            _id = None
+            _props = {}
+            yield(
+                _id,
+                row['source'],
+                row['target'],
+                row['_type'],
+                _props
+            )
+        for index, row in self._annotation_edges.iterrows():
+            # if row["_type"] not in self.edge_types:
+            #     continue
+            _id = None
+            _props = {}
+            yield(
+                _id,
+                row['source'],
+                row['target'],
+                row['_type'],
+                _props
+            )
 
     def _set_types_and_fields(self, node_types, node_fields, edge_types, edge_fields):
         if node_types:

@@ -8,7 +8,7 @@ All data used in the wheatomics biochatter developpement are available at https:
 
 ### biomart queries 
 
-Gene annotations, functions and homologies were gathered using BioMart on EnsemblPlant portal https://plants.ensembl.org/biomart
+Gene annotations, functions and homologies were gathered using BioMart on EnsemblPlant portal https://plants.ensembl.org/biomart/martview
 
 - Arabidopsis genes : mart_ath_tair10_export.txt
 

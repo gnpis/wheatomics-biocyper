@@ -58,7 +58,8 @@ services:
       import:
         condition: service_completed_successfully
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_MODEL=llama3.2:3b-instruct-fp16
+      - OLLAMA_URL=https://ollama.colab.ia.inrae.fr
       - DOCKER_COMPOSE=true
       - CHAT_TAB=true
       - PROMPT_ENGINEERING_TAB=true

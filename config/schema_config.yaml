@@ -30,11 +30,16 @@ HOMOLOGOUS_TO:
   is_a: association
   represented_as: edge
   input_label: HOMOLOGOUS_TO
+  target: gene
+  source: gene
 
 RELATED_TO:
+  aliases: ['has function', 'is involved']
   is_a: association
   represented_as: edge
   input_label: RELATED_TO
+  target: go term
+  source: gene
     
 transcript:
   aliases: ['mRNA']

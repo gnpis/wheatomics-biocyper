@@ -12,33 +12,33 @@ Gene annotations, functions and homologies were gathered using BioMart on Ensemb
 
 - Arabidopsis genes : mart_ath_tair10_export.txt
 
-database : Ensembl Plants Genes 60
-dataset : Arabidopsis thaliana genes (TAIR10)
-Attributes : Features
-Attributes:GENE :Gene stables ID ; Chromosome ; Gene start ; Gene end ; Gene name ; Gene type
+database : Ensembl Plants Genes 60  
+dataset : Arabidopsis thaliana genes (TAIR10)  
+Attributes : Features  
+Attributes:GENE :Gene stables ID ; Chromosome ; Gene start ; Gene end ; Gene name ; Gene type  
 
 - Rice genes : mart_osjaponica_irgsp1_export.txt
 
-database : Ensembl Plants Genes 60
-dataset : Oryza sativa Japonica Group genes (IRGSP-1.0)
-Attributes : Features
-Attributes:GENE :Gene stables ID ; Chromosome ; Gene start ; Gene end ; Gene name ; Gene type ; Gene description
-Attributes:EXTERNAL : UniProtKB Gene Name symbol ; UniProtKB Gene Name ID
+database : Ensembl Plants Genes 60  
+dataset : Oryza sativa Japonica Group genes (IRGSP-1.0)  
+Attributes : Features  
+Attributes:GENE :Gene stables ID ; Chromosome ; Gene start ; Gene end ; Gene name ; Gene type ; Gene description  
+Attributes:EXTERNAL : UniProtKB Gene Name symbol ; UniProtKB Gene Name ID  
 
 - Wheat V1.1 Genes :  mart_tritaestivum_CS_IWGSCv1.1_export.txt
 
-database : Ensembl Plants Genes 60
-dataset : Triticum aestivum genes (IWGSC)
-Attributes : Features
-Attributes:GENE :Gene stables ID ; Chromosome ; Gene start ; Gene end ; Gene name ; Gene description
+database : Ensembl Plants Genes 60  
+dataset : Triticum aestivum genes (IWGSC)  
+Attributes : Features  
+Attributes:GENE :Gene stables ID ; Chromosome ; Gene start ; Gene end ; Gene name ; Gene description  
 
 - Wheat homologies with A. thaliana and O. sativa cv. Japonica : Wheat_othologs_with_arabido_and_O.Sativa.japonic.txt
 
-database : Ensembl Plants Genes 60
-dataset : Triticum aestivum genes (IWGSC)
-Attributes : Homologues
-Orthologues[A-E] : Arabidopsis thaliana Orthologues [gene stable id ; homology type ; orthology confidence]
-Orthologues[K-O] : Oryza sativa Japonica Group Orthologues [gene stable id ; homology type ; orthology confidence]
+database : Ensembl Plants Genes 60  
+dataset : Triticum aestivum genes (IWGSC)  
+Attributes : Homologues  
+Orthologues[A-E] : Arabidopsis thaliana Orthologues [gene stable id ; homology type ; orthology confidence]  
+Orthologues[K-O] : Oryza sativa Japonica Group Orthologues [gene stable id ; homology type ; orthology confidence]  
 
 
 ## Using the GitHub Template functionality
